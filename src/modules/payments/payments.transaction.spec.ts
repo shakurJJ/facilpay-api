@@ -5,6 +5,7 @@ import { NotFoundException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { Payment, PaymentStatus } from './payment.entity';
 import { AppLogger } from '../logger/logger.service';
+import { IdempotencyService } from './idempotency.service';
 
 describe('PaymentsService - Transactions', () => {
   let service: PaymentsService;
@@ -30,6 +31,11 @@ describe('PaymentsService - Transactions', () => {
       debug: jest.fn(),
       warn: jest.fn(),
     })),
+  };
+
+  const mockIdempotencyService = {
+    checkIdempotencyKey: jest.fn().mockResolvedValue(null),
+    storeIdempotencyKey: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -67,6 +73,10 @@ describe('PaymentsService - Transactions', () => {
         {
           provide: AppLogger,
           useValue: mockAppLogger,
+        },
+        {
+          provide: IdempotencyService,
+          useValue: mockIdempotencyService,
         },
       ],
     }).compile();
@@ -217,7 +227,7 @@ describe('PaymentsService - Transactions', () => {
       };
 
       const paymentWithoutRef = { ...mockPayment, externalReference: '' };
-      const updatedPayment = {
+      const updatedPaymentData = {
         ...paymentWithoutRef,
         status: PaymentStatus.COMPLETED,
         externalReference: 'ext_ref_456',

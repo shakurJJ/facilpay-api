@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -25,6 +25,8 @@ export class UsersService {
       password: hashedPassword,
       roles: [UserRole.USER],
       isEmailVerified: false,
+      isActive: true,
+      deletedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -44,7 +46,9 @@ export class UsersService {
     sortBy?: string;
     search?: string;
   }): Promise<import('../../common/interfaces').PaginatedResult<Omit<User, 'password'>>> {
-    let filtered = this.users;
+    // Filter out soft-deleted users
+    let filtered = this.users.filter(u => !u.deletedAt);
+
     // Filtering by email (partial match)
     if (params?.search) {
       const searchLower = params.search.toLowerCase();
@@ -71,7 +75,7 @@ export class UsersService {
   }
 
   async findOne(id: string): Promise<Omit<User, 'password'>> {
-    const user = this.users.find((user) => user.id === id);
+    const user = this.users.find((user) => user.id === id && !user.deletedAt);
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -80,14 +84,14 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | undefined> {
-    return this.users.find((user) => user.email === email);
+    return this.users.find((user) => user.email === email && !user.deletedAt);
   }
 
   async update(
     id: string,
     updateUserDto: UpdateUserDto,
   ): Promise<Omit<User, 'password'>> {
-    const userIndex = this.users.findIndex((user) => user.id === id);
+    const userIndex = this.users.findIndex((user) => user.id === id && !user.deletedAt);
     if (userIndex === -1) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -115,6 +119,17 @@ export class UsersService {
     return result;
   }
 
+  async softDelete(id: string): Promise<void> {
+    const userIndex = this.users.findIndex((user) => user.id === id && !user.deletedAt);
+    if (userIndex === -1) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    this.users[userIndex].deletedAt = new Date();
+    this.users[userIndex].isActive = false;
+    this.users[userIndex].updatedAt = new Date();
+    this.logger.info({ userId: id }, 'User soft deleted');
+  }
+
   async remove(id: string): Promise<void> {
     const userIndex = this.users.findIndex((user) => user.id === id);
     if (userIndex === -1) {
@@ -124,8 +139,21 @@ export class UsersService {
     this.logger.info({ userId: id }, 'User removed');
   }
 
+  async restore(id: string): Promise<Omit<User, 'password'>> {
+    const userIndex = this.users.findIndex((user) => user.id === id && user.deletedAt);
+    if (userIndex === -1) {
+      throw new NotFoundException(`Deleted user with ID ${id} not found`);
+    }
+    this.users[userIndex].deletedAt = null;
+    this.users[userIndex].isActive = true;
+    this.users[userIndex].updatedAt = new Date();
+    const { password, ...result } = this.users[userIndex];
+    this.logger.info({ userId: id }, 'User restored');
+    return result;
+  }
+
   async verifyEmail(id: string): Promise<void> {
-    const userIndex = this.users.findIndex((user) => user.id === id);
+    const userIndex = this.users.findIndex((user) => user.id === id && !user.deletedAt);
     if (userIndex === -1) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }

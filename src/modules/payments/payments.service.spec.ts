@@ -5,6 +5,7 @@ import { PaymentsService } from './payments.service';
 import { Payment, PaymentStatus } from './payment.entity';
 import { NotFoundException } from '@nestjs/common';
 import { AppLogger } from '../logger/logger.service';
+import { IdempotencyService } from './idempotency.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
@@ -23,7 +24,7 @@ describe('PaymentsService', () => {
   };
 
   const mockPaymentRepository = {
-    create: jest.fn().mockImplementation((dto) => dto),
+    create: jest.fn().mockImplementation((dto) => dto as Payment),
     save: jest.fn().mockImplementation((payment) =>
       Promise.resolve({
         id: 'uuid-123',
@@ -49,6 +50,11 @@ describe('PaymentsService', () => {
     })),
   };
 
+  const mockIdempotencyService = {
+    checkIdempotencyKey: jest.fn().mockResolvedValue(null),
+    storeIdempotencyKey: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -64,6 +70,10 @@ describe('PaymentsService', () => {
         {
           provide: AppLogger,
           useValue: mockAppLogger,
+        },
+        {
+          provide: IdempotencyService,
+          useValue: mockIdempotencyService,
         },
       ],
     }).compile();

@@ -1,34 +1,81 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { HealthService } from './health.service';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags, ApiServiceUnavailableResponse } from '@nestjs/swagger';
 
 @ApiTags('health')
-@Controller('health')
+@Controller('v1/health')
 export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
+  constructor(private readonly healthService: HealthService) { }
 
   @Get()
   @ApiOperation({
     summary: 'Health check',
     description:
-      'Returns API health status and verifies database connectivity (runs a lightweight `SELECT 1`).',
+      'Returns API health status including database, Stellar network, and system metrics. Returns 503 if any critical subsystem is unhealthy.',
   })
   @ApiOkResponse({
-    description: 'Health status.',
+    description: 'Health status (ok or degraded).',
     schema: {
       example: {
         status: 'ok',
+        statusCode: 200,
         timestamp: '2026-01-26T10:00:00.000Z',
+        uptime: 3600,
         services: {
           database: {
-            connected: true,
+            status: 'healthy',
             message: 'Database connection is healthy',
+          },
+          stellar: {
+            status: 'healthy',
+            message: 'Stellar network is reachable',
+          },
+          system: {
+            memory: {
+              used: 536870912,
+              total: 8589934592,
+              percentUsed: 6.25,
+            },
+            uptime: 3600,
           },
         },
       },
     },
   })
-  async health() {
-    return this.healthService.check();
+  @ApiServiceUnavailableResponse({
+    description: 'Service unavailable - critical subsystem is unhealthy.',
+    schema: {
+      example: {
+        status: 'unhealthy',
+        statusCode: 503,
+        timestamp: '2026-01-26T10:00:00.000Z',
+        uptime: 3600,
+        services: {
+          database: {
+            status: 'unhealthy',
+            message: 'Database connection failed',
+          },
+          stellar: {
+            status: 'healthy',
+            message: 'Stellar network is reachable',
+          },
+          system: {
+            memory: {
+              used: 536870912,
+              total: 8589934592,
+              percentUsed: 6.25,
+            },
+            uptime: 3600,
+          },
+        },
+      },
+    },
+  })
+  async health(): Promise<any> {
+    const result = await this.healthService.check();
+    if (result.statusCode === 503) {
+      throw new ServiceUnavailableException(result);
+    }
+    return result;
   }
 }

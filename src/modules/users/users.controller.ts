@@ -33,9 +33,9 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('users')
-@Controller('users')
+@Controller('v1/users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   @ApiOperation({
@@ -192,7 +192,7 @@ export class UsersController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Delete a user',
-    description: 'Deletes a user by id. Admin only.',
+    description: 'Soft deletes a user by id (sets deletedAt). Admin only.',
   })
   @ApiParam({
     name: 'id',
@@ -212,6 +212,61 @@ export class UsersController {
     },
   })
   remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+    return this.usersService.softDelete(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('me')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Delete current user account',
+    description: 'Soft deletes the authenticated user account.',
+  })
+  @ApiNoContentResponse({
+    description: 'Account deleted successfully.',
+  })
+  async deleteSelf(@Request() req: any) {
+    await this.usersService.softDelete(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Post(':id/restore')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Restore a deleted user',
+    description: 'Restores a soft-deleted user account. Admin only.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'User id.',
+    example: 'abc123',
+  })
+  @ApiOkResponse({
+    description: 'User restored successfully.',
+    schema: {
+      example: {
+        id: 'abc123',
+        email: 'jane.doe@example.com',
+        roles: ['USER'],
+        isEmailVerified: true,
+        isActive: true,
+        deletedAt: null,
+        createdAt: '2026-01-26T10:00:00.000Z',
+        updatedAt: '2026-01-26T12:00:00.000Z',
+      },
+    },
+  })
+  @ApiForbiddenResponse({
+    description: 'User does not have ADMIN role.',
+    schema: {
+      example: {
+        statusCode: 403,
+        message: 'Forbidden',
+      },
+    },
+  })
+  async restore(@Param('id') id: string) {
+    return this.usersService.restore(id);
   }
 }

@@ -18,8 +18,14 @@ describe('AppController (e2e)', () => {
 
   it('/ (GET)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/v1/')
       .expect(200)
-      .expect('Hello World!');
+      .expect('FacilPay API running');
+  });
+
+  it('/health (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/v1/health')
+      .expect(200);
   });
 });

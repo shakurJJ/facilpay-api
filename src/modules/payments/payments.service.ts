@@ -8,6 +8,7 @@ import { RefundPaymentDto } from './dto/refund-payment.dto';
 import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { AppLogger } from '../logger/logger.service';
 import { Logger } from 'pino';
+import { IdempotencyService } from './idempotency.service';
 
 @Injectable()
 export class PaymentsService {
@@ -20,15 +21,33 @@ export class PaymentsService {
     private readonly refundRepository: Repository<Refund>,
     private readonly dataSource: DataSource,
     appLogger: AppLogger,
+    private readonly idempotencyService: IdempotencyService,
   ) {
     this.logger = appLogger.child({ module: PaymentsService.name });
   }
 
   /**
-   * Create a payment with transaction support
+   * Create a payment with transaction support and idempotency key handling
    * Ensures atomic operation - either fully succeeds or rolls back
+   * @param createPaymentDto - Payment creation data
+   * @param idempotencyKey - Optional idempotency key for request deduplication
+   * @returns Created payment
    */
-  async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
+  async create(
+    createPaymentDto: CreatePaymentDto,
+    idempotencyKey?: string,
+  ): Promise<Payment> {
+    // Check for existing idempotency key
+    if (idempotencyKey) {
+      const cachedResponse = await this.idempotencyService.checkIdempotencyKey(
+        idempotencyKey,
+        createPaymentDto as unknown as Record<string, unknown>,
+      );
+      if (cachedResponse) {
+        return cachedResponse.responseBody as unknown as Payment;
+      }
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
 
     try {
@@ -49,11 +68,21 @@ export class PaymentsService {
       await queryRunner.commitTransaction();
       this.logger.info(`Payment created successfully: ${savedPayment.id}`);
 
+      // Store idempotency key after successful creation
+      if (idempotencyKey) {
+        await this.idempotencyService.storeIdempotencyKey(
+          idempotencyKey,
+          createPaymentDto as unknown as Record<string, unknown>,
+          savedPayment as unknown as Record<string, unknown>,
+          201,
+        );
+      }
+
       return savedPayment;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(
-        `Payment creation failed and rolled back: ${error.message}`,
+        `Payment creation failed and rolled back: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       throw error;
     } finally {
@@ -198,7 +227,7 @@ export class PaymentsService {
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error(
-        `Webhook transaction failed and rolled back: ${error.message}`,
+        `Webhook transaction failed and rolled back: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       throw error;
     } finally {

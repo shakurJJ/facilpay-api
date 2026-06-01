@@ -7,10 +7,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { IdempotencyKey } from './idempotency.entity';
 import { createHash } from 'crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, LessThan } from 'typeorm';
+import { IdempotencyKey } from './entities/idempotency-key.entity';
+import { AppLogger } from '../logger/logger.service';
+import { Logger } from 'pino';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class IdempotencyService {
+  private readonly logger: Logger;
   private readonly ttlHours: number;
 
   constructor(

@@ -77,6 +77,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.deletedAt) {
+      throw new ForbiddenException(
+        'This account has been deleted. Please contact support to restore your account.',
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
       user.password,
@@ -91,7 +97,7 @@ export class AuthService {
       );
     }
 
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: user.id, email: user.email, roles: user.roles };
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload),
       this.generateRefreshToken(user.id),

@@ -35,9 +35,9 @@ import { WebhookGuard } from './webhook.guard';
 import { IdempotencyInterceptor } from './idempotency.interceptor';
 
 @ApiTags('payments')
-@Controller('payments')
+@Controller('v1/payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post()
   @UseInterceptors(IdempotencyInterceptor)
@@ -96,8 +96,11 @@ export class PaymentsController {
       example: { statusCode: 500, message: 'Internal server error' },
     },
   })
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentsService.create(createPaymentDto);
+  create(
+    @Body() createPaymentDto: CreatePaymentDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.paymentsService.create(createPaymentDto, idempotencyKey);
   }
 
   @Get()

@@ -27,9 +27,9 @@ describe('UsersModule (e2e)', () => {
     await app.close();
   });
 
-  it('/users (POST) - Create a user independently', async () => {
+  it('/v1/users (POST) - Create a user independently', async () => {
     const response = await request(app.getHttpServer())
-      .post('/users')
+      .post('/v1/users')
       .send(testUser)
       .expect(201);
 
@@ -39,9 +39,9 @@ describe('UsersModule (e2e)', () => {
     userId = response.body.id;
   });
 
-  it('/auth/login (POST) - Login with created user', async () => {
+  it('/v1/auth/login (POST) - Login with created user', async () => {
     const response = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send(testUser)
       .expect(200);
 
@@ -49,9 +49,9 @@ describe('UsersModule (e2e)', () => {
     jwtToken = response.body.access_token;
   });
 
-  it('/users (GET) - Get all users paginated (Protected)', async () => {
+  it('/v1/users (GET) - Get all users paginated (Protected)', async () => {
     const response = await request(app.getHttpServer())
-      .get('/users?page=1&limit=2')
+      .get('/v1/users?page=1&limit=2')
       .set('Authorization', `Bearer ${jwtToken}`)
       .expect(200);
 
@@ -64,18 +64,18 @@ describe('UsersModule (e2e)', () => {
     expect(response.body.limit).toBeLessThanOrEqual(100);
   });
 
-  it('/users (GET) - Filter users by email (Protected)', async () => {
+  it('/v1/users (GET) - Filter users by email (Protected)', async () => {
     const response = await request(app.getHttpServer())
-      .get('/users?search=test@example.com')
+      .get('/v1/users?search=test@example.com')
       .set('Authorization', `Bearer ${jwtToken}`)
       .expect(200);
     expect(Array.isArray(response.body.data)).toBe(true);
     expect(response.body.data.some(u => u.email === testUser.email)).toBe(true);
   });
 
-  it('/users/:id (GET) - Get specific user (Protected)', async () => {
+  it('/v1/users/:id (GET) - Get specific user (Protected)', async () => {
     const response = await request(app.getHttpServer())
-      .get(`/users/${userId}`)
+      .get(`/v1/users/${userId}`)
       .set('Authorization', `Bearer ${jwtToken}`)
       .expect(200);
 
@@ -83,10 +83,10 @@ describe('UsersModule (e2e)', () => {
     expect(response.body.email).toBe(testUser.email);
   });
 
-  it('/users/:id (PATCH) - Update user (Protected)', async () => {
+  it('/v1/users/:id (PATCH) - Update user (Protected)', async () => {
     const updateData = { email: 'updated@example.com' };
     const response = await request(app.getHttpServer())
-      .patch(`/users/${userId}`)
+      .patch(`/v1/users/${userId}`)
       .set('Authorization', `Bearer ${jwtToken}`)
       .send(updateData)
       .expect(200);
@@ -94,27 +94,29 @@ describe('UsersModule (e2e)', () => {
     expect(response.body.email).toBe(updateData.email);
   });
 
-  it('/users/:id (DELETE) - Delete user (Protected)', async () => {
+  it('/v1/users/:id (DELETE) - Soft delete user (Protected)', async () => {
     await request(app.getHttpServer())
-      .delete(`/users/${userId}`)
+      .delete(`/v1/users/${userId}`)
       .set('Authorization', `Bearer ${jwtToken}`)
       .expect(200);
 
-    // Verify deletion - Access with deleted user's token should fail (401)
-    await request(app.getHttpServer())
-      .get(`/users/${userId}`)
+    // Verify soft deletion - User should not appear in list
+    const listRes = await request(app.getHttpServer())
+      .get('/v1/users')
       .set('Authorization', `Bearer ${jwtToken}`)
-      .expect(401);
+      .expect(200);
+
+    expect(listRes.body.data.some(u => u.id === userId)).toBe(false);
   });
 
-  it('/users/:id (GET) - Get non-existent user (Protected)', async () => {
+  it('/v1/users/:id (GET) - Get non-existent user (Protected)', async () => {
     // Create a new user to get a valid token
     const newUser = { email: 'temp@example.com', password: 'password' };
-    await request(app.getHttpServer()).post('/users').send(newUser).expect(201);
+    await request(app.getHttpServer()).post('/v1/users').send(newUser).expect(201);
 
     // Login
     const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send(newUser)
       .expect(200);
 
@@ -122,7 +124,7 @@ describe('UsersModule (e2e)', () => {
     const fakeId = 'nonicon-existent-id';
 
     await request(app.getHttpServer())
-      .get(`/users/${fakeId}`)
+      .get(`/v1/users/${fakeId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
   });

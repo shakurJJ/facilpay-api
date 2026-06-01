@@ -30,9 +30,9 @@ import { WebhookThrottle } from '../throttler/throttler.decorator';
 import { WebhookGuard } from './webhook.guard';
 
 @ApiTags('payments')
-@Controller('payments')
+@Controller('v1/payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post()
   @ApiOperation({

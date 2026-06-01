@@ -6,6 +6,8 @@ export class User {
   password: string;
   roles: UserRole[] = [UserRole.USER];
   isEmailVerified: boolean = false;
+  isActive: boolean = true;
+  deletedAt: Date | null = null;
   createdAt: Date;
   updatedAt: Date;
 
@@ -16,6 +18,12 @@ export class User {
     }
     if (this.isEmailVerified === undefined) {
       this.isEmailVerified = false;
+    }
+    if (this.isActive === undefined) {
+      this.isActive = true;
+    }
+    if (this.deletedAt === undefined) {
+      this.deletedAt = null;
     }
   }
 }

@@ -27,6 +27,8 @@ async function bootstrap() {
     .setTitle('FacilPay API')
     .setDescription('FacilPay API documentation')
     .setVersion('1.0.0')
+    .addServer('http://localhost:3000/v1', 'Development (v1)')
+    .addServer('https://api.facilpay.com/v1', 'Production (v1)')
     .addBearerAuth(
       {
         type: 'http',

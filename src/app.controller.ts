@@ -12,9 +12,9 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('app')
-@Controller()
+@Controller('v1')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
   @Get()
   @Public()

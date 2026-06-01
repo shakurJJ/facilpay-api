@@ -28,9 +28,9 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('auth')
-@Controller('auth')
+@Controller('v1/auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @AuthThrottle()
   @Post('register')

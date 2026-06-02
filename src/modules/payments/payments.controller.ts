@@ -4,10 +4,12 @@ import {
   Post,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   UseGuards,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,6 +30,7 @@ import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { RefundPaymentDto } from './dto/refund-payment.dto';
 import { PaymentWebhookDto } from './dto/payment-webhook.dto';
+import { GetPaymentsDto } from './dto/get-payments.dto';
 import { Payment } from './payment.entity';
 import { Refund } from './refund.entity';
 import { WebhookThrottle } from '../throttler/throttler.decorator';
@@ -107,11 +110,21 @@ export class PaymentsController {
   @ApiOperation({
     summary: 'List all payments',
     description:
-      'Returns all payments ordered by creation date (newest first).',
+      'Returns payments with optional filtering by status, currency, date range, and amount range. Supports free-text search against description and externalReference. Results ordered by creation date (newest first).',
   })
   @ApiOkResponse({
     description: 'List of payments.',
     type: [Payment],
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid filter parameters provided.',
+    schema: {
+      example: {
+        statusCode: 400,
+        message: 'from date must not be greater than to date',
+        error: 'Bad Request',
+      },
+    },
   })
   @ApiInternalServerErrorResponse({
     description: 'Internal server error.',
@@ -119,8 +132,17 @@ export class PaymentsController {
       example: { statusCode: 500, message: 'Internal server error' },
     },
   })
-  findAll() {
-    return this.paymentsService.findAll();
+  findAll(@Query() getPaymentsDto: GetPaymentsDto) {
+    // Validate date range
+    if (getPaymentsDto.from && getPaymentsDto.to) {
+      const fromTime = new Date(getPaymentsDto.from).getTime();
+      const toTime = new Date(getPaymentsDto.to).getTime();
+      if (fromTime > toTime) {
+        throw new BadRequestException('from date must not be greater than to date');
+      }
+    }
+
+    return this.paymentsService.findAll(getPaymentsDto);
   }
 
   @Get(':id')

@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, LessThanOrEqual, MoreThanOrEqual, Like, Between } from 'typeorm';
 import { Payment, PaymentStatus } from './payment.entity';
 import { Refund } from './refund.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { RefundPaymentDto } from './dto/refund-payment.dto';
 import { PaymentWebhookDto } from './dto/payment-webhook.dto';
+import { GetPaymentsDto } from './dto/get-payments.dto';
 import { AppLogger } from '../logger/logger.service';
 import { Logger } from 'pino';
 import { IdempotencyService } from './idempotency.service';
@@ -90,10 +91,51 @@ export class PaymentsService {
     }
   }
 
-  async findAll(): Promise<Payment[]> {
-    return await this.paymentRepository.find({
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(getPaymentsDto: GetPaymentsDto): Promise<Payment[]> {
+    const query = this.paymentRepository.createQueryBuilder('payment');
+
+    // Apply filters - all conditions use AND logic
+    if (getPaymentsDto.status) {
+      query.andWhere('payment.status = :status', { status: getPaymentsDto.status });
+    }
+
+    if (getPaymentsDto.currency) {
+      query.andWhere('payment.currency = :currency', { currency: getPaymentsDto.currency });
+    }
+
+    if (getPaymentsDto.minAmount !== undefined) {
+      query.andWhere('payment.amount >= :minAmount', { minAmount: getPaymentsDto.minAmount });
+    }
+
+    if (getPaymentsDto.maxAmount !== undefined) {
+      query.andWhere('payment.amount <= :maxAmount', { maxAmount: getPaymentsDto.maxAmount });
+    }
+
+    if (getPaymentsDto.from) {
+      query.andWhere('payment.createdAt >= :fromDate', { fromDate: getPaymentsDto.from });
+    }
+
+    if (getPaymentsDto.to) {
+      query.andWhere('payment.createdAt <= :toDate', { toDate: getPaymentsDto.to });
+    }
+
+    if (getPaymentsDto.search) {
+      // Free-text search against description and externalReference
+      const searchTerm = `%${getPaymentsDto.search}%`;
+      query.andWhere(
+        '(payment.description ILIKE :search OR payment.externalReference ILIKE :search)',
+        { search: searchTerm },
+      );
+    }
+
+    // Apply pagination
+    const skip = ((getPaymentsDto.page || 1) - 1) * (getPaymentsDto.limit || 20);
+    query.skip(skip).take(getPaymentsDto.limit || 20);
+
+    // Order by creation date (newest first)
+    query.orderBy('payment.createdAt', 'DESC');
+
+    return await query.getMany();
   }
 
   async findOne(id: string): Promise<Payment> {

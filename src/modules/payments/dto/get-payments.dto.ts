@@ -1,0 +1,73 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsISO8601,
+} from 'class-validator';
+import { PaymentStatus } from '../payment.entity';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+
+export class GetPaymentsDto extends PaginationDto {
+  @ApiPropertyOptional({
+    enum: PaymentStatus,
+    description: 'Filter by payment status',
+  })
+  @IsEnum(PaymentStatus, {
+    message:
+      'status must be one of: ' + Object.values(PaymentStatus).join(', '),
+  })
+  @IsOptional()
+  status?: PaymentStatus;
+
+  @ApiPropertyOptional({
+    description: 'Filter by currency code (e.g., USD, EUR)',
+    example: 'USD',
+  })
+  @IsString()
+  @IsOptional()
+  currency?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum amount (inclusive)',
+    example: 10.5,
+    type: 'number',
+  })
+  @Type(() => Number)
+  @IsOptional()
+  minAmount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum amount (inclusive)',
+    example: 1000.0,
+    type: 'number',
+  })
+  @Type(() => Number)
+  @IsOptional()
+  maxAmount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Start date filter (ISO 8601 format)',
+    example: '2026-01-01T00:00:00Z',
+  })
+  @IsISO8601({}, { message: 'from must be a valid ISO 8601 date' })
+  @IsOptional()
+  from?: string;
+
+  @ApiPropertyOptional({
+    description: 'End date filter (ISO 8601 format)',
+    example: '2026-12-31T23:59:59Z',
+  })
+  @IsISO8601({}, { message: 'to must be a valid ISO 8601 date' })
+  @IsOptional()
+  to?: string;
+
+  @ApiPropertyOptional({
+    description: 'Search by description or externalReference (partial match)',
+    example: 'order #123',
+  })
+  @IsString()
+  @IsOptional()
+  search?: string;
+}

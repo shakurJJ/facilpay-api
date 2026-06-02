@@ -326,4 +326,43 @@ export class PaymentsService {
       await queryRunner.release();
     }
   }
+
+  /**
+   * Cancel a payment
+   * Only PENDING payments can be cancelled
+   */
+  async cancel(id: string): Promise<Payment> {
+    const payment = await this.paymentRepository.findOneBy({ id });
+
+    if (!payment) {
+      throw new NotFoundException(`Payment with ID ${id} not found`);
+    }
+
+    // Check if payment is in a terminal state
+    const terminalStates = [
+      PaymentStatus.COMPLETED,
+      PaymentStatus.FAILED,
+      PaymentStatus.CANCELLED,
+      PaymentStatus.REFUNDED,
+      PaymentStatus.PARTIALLY_REFUNDED,
+    ];
+
+    if (terminalStates.includes(payment.status)) {
+      throw new ConflictException(
+        `Cannot cancel payment with status ${payment.status}. Only PENDING payments can be cancelled.`,
+      );
+    }
+
+    payment.status = PaymentStatus.CANCELLED;
+    payment.cancelledAt = new Date();
+    payment.updatedAt = new Date();
+
+    const updatedPayment = await this.paymentRepository.save(payment);
+    this.logger.info(
+      { paymentId: id, cancelledAt: updatedPayment.cancelledAt },
+      'Payment cancelled successfully',
+    );
+
+    return updatedPayment;
+  }
 }

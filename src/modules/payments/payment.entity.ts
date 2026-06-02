@@ -10,6 +10,7 @@ export enum PaymentStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
   REFUNDED = 'REFUNDED',
   PARTIALLY_REFUNDED = 'PARTIALLY_REFUNDED',
 }
@@ -40,6 +41,9 @@ export class Payment {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   refundedAmount: number;
+
+  @Column({ nullable: true })
+  cancelledAt: Date | null = null;
 
   @CreateDateColumn()
   createdAt: Date;

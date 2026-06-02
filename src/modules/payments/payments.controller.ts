@@ -334,4 +334,66 @@ export class PaymentsController {
   refund(@Param('id') id: string, @Body() refundDto: RefundPaymentDto) {
     return this.paymentsService.refund(id, refundDto);
   }
+
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel a payment',
+    description:
+      'Cancels a PENDING payment. Only payments in PENDING status can be cancelled. Transitions payment to CANCELLED status.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Payment UUID to cancel',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiOkResponse({
+    description: 'Payment cancelled successfully.',
+    schema: {
+      example: {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        amount: '100.00',
+        currency: 'USD',
+        status: 'CANCELLED',
+        description: 'Payment for order #12345',
+        externalReference: null,
+        refundedAmount: '0.00',
+        cancelledAt: '2026-01-26T11:00:00.000Z',
+        createdAt: '2026-01-26T10:00:00.000Z',
+        updatedAt: '2026-01-26T11:00:00.000Z',
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Payment not found.',
+    schema: {
+      example: {
+        statusCode: 404,
+        message:
+          'Payment with ID 123e4567-e89b-12d3-a456-426614174000 not found',
+        error: 'Not Found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Payment cannot be cancelled (not in PENDING status or already in terminal state).',
+    schema: {
+      example: {
+        statusCode: 409,
+        message: 'Cannot cancel payment with status COMPLETED. Only PENDING payments can be cancelled.',
+        error: 'Conflict',
+      },
+    },
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Internal server error.',
+    schema: {
+      example: { statusCode: 500, message: 'Internal server error' },
+    },
+  })
+  cancel(@Param('id') id: string) {
+    return this.paymentsService.cancel(id);
+  }
 }

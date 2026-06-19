@@ -78,7 +78,7 @@ curl -X POST http://localhost:3000/auth/login \
 curl -X GET http://localhost:3000/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
-
+```
 ## 📁 Project Structure
 
 src/
@@ -102,7 +102,7 @@ src/
 ├── app.service.ts
 ├── app.module.ts
 └── main.ts
-
+```
 
 ## 🧪 Development
 
@@ -137,7 +137,7 @@ Environment variables:
 - Telegram: https://t.me/+afM9uh7GGtVkYmZk
 
 # Stellar Configuration structure
-
+```
 ├── modules/
 │   ├── auth/
 │   ├── stellar/          <-- New Module
@@ -145,3 +145,5 @@ Environment variables:
 │   │   └── stellar.module.ts
 │   ├── users/
 │   └── health/
+
+```

@@ -10,4 +10,7 @@ module.exports = {
   ],
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
+  moduleNameMapper: {
+    '^lodash/(.*)$': '<rootDir>/../node_modules/lodash/$1',
+  },
 };

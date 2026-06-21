@@ -3,13 +3,13 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
+  IsUrl,
   Min,
   MaxLength,
   IsPositive,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsISO4217CurrencyCode } from '../../../common/validators/is-iso4217-currency-code.validator';
-
 
 export class CreatePaymentDto {
   @IsNumber()
@@ -33,7 +33,6 @@ export class CreatePaymentDto {
   @IsISO4217CurrencyCode({ supportedOnly: true })
   currency: string;
 
-
   @IsString()
   @IsOptional()
   @MaxLength(500, { message: 'Description must not exceed 500 characters' })
@@ -43,4 +42,13 @@ export class CreatePaymentDto {
     maxLength: 500,
   })
   description?: string;
+
+  @IsUrl({}, { message: 'callbackUrl must be a valid URL' })
+  @IsOptional()
+  @ApiPropertyOptional({
+    description: 'URL to receive outbound webhook notifications on payment status changes',
+    example: 'https://merchant.example.com/webhooks/payment',
+    maxLength: 2048,
+  })
+  callbackUrl?: string;
 }

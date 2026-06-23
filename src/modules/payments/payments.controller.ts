@@ -26,6 +26,7 @@ import {
   ApiInternalServerErrorResponse,
   ApiUnprocessableEntityResponse,
   ApiResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
@@ -47,6 +48,7 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post()
+  @ApiBearerAuth('bearer')
   @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({
     summary: 'Create a payment',
@@ -112,6 +114,7 @@ export class PaymentsController {
 
   @BulkThrottle()
   @Post('bulk')
+  @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Create multiple payments in a single transaction',
     description:
@@ -128,8 +131,7 @@ export class PaymentsController {
     schema: {
       example: {
         statusCode: 400,
-        message:
-          'Payment batch must contain between 1 and 100 payment objects.',
+        message: 'Payment batch must contain between 1 and 100 payment objects.',
         error: 'Bad Request',
       },
     },
@@ -166,6 +168,7 @@ export class PaymentsController {
   }
 
   @Get()
+  @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'List all payments',
     description:
@@ -197,7 +200,9 @@ export class PaymentsController {
       const fromTime = new Date(getPaymentsDto.from).getTime();
       const toTime = new Date(getPaymentsDto.to).getTime();
       if (fromTime > toTime) {
-        throw new BadRequestException('from date must not be greater than to date');
+        throw new BadRequestException(
+          'from date must not be greater than to date',
+        );
       }
     }
 
@@ -205,6 +210,7 @@ export class PaymentsController {
   }
 
   @Get(':id')
+  @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Get a payment by ID',
     description: 'Returns a single payment by its UUID.',
@@ -245,6 +251,7 @@ export class PaymentsController {
   @UseGuards(WebhookGuard)
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
+
   @ApiOperation({
     summary: 'Handle payment webhook',
     description:
@@ -317,6 +324,7 @@ export class PaymentsController {
   }
 
   @Post(':id/refund')
+  @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Refund a payment',
     description:
@@ -374,8 +382,7 @@ export class PaymentsController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Payment cannot be refunded (already refunded, pending, or failed).',
+    description: 'Payment cannot be refunded (already refunded, pending, or failed).',
     schema: {
       example: {
         statusCode: 409,
@@ -395,6 +402,7 @@ export class PaymentsController {
   }
 
   @Post(':id/cancel')
+  @ApiBearerAuth('bearer')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Cancel a payment',
@@ -436,12 +444,12 @@ export class PaymentsController {
   })
   @ApiResponse({
     status: 409,
-    description:
-      'Payment cannot be cancelled (not in PENDING status or already in terminal state).',
+    description: 'Payment cannot be cancelled (not in PENDING status or already in terminal state).',
     schema: {
       example: {
         statusCode: 409,
-        message: 'Cannot cancel payment with status COMPLETED. Only PENDING payments can be cancelled.',
+        message:
+          'Cannot cancel payment with status COMPLETED. Only PENDING payments can be cancelled.',
         error: 'Conflict',
       },
     },
@@ -456,3 +464,4 @@ export class PaymentsController {
     return this.paymentsService.cancel(id);
   }
 }
+

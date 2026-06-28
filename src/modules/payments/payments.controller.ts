@@ -12,7 +12,12 @@ import {
   BadRequestException,
   Headers,
   Res,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { SseJwtGuard } from '../auth/guards/sse-jwt.guard';
+import { PaymentSseService } from './payment-sse.service';
 
 import {
   ApiTags,
@@ -29,6 +34,7 @@ import {
   ApiUnprocessableEntityResponse,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
@@ -62,7 +68,10 @@ import { IdempotencyInterceptor } from './idempotency.interceptor';
 
 @Controller('v1/payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) { }
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly paymentSseService: PaymentSseService,
+  ) { }
 
   @Post()
   @ApiBearerAuth('bearer')
@@ -479,6 +488,41 @@ export class PaymentsController {
   })
   cancel(@Param('id') id: string) {
     return this.paymentsService.cancel(id);
+  }
+
+  @Sse(':id/events')
+  @UseGuards(SseJwtGuard)
+  @ApiOperation({
+    summary: 'Subscribe to real-time payment status events (SSE)',
+    description:
+      'Opens a Server-Sent Events stream for a payment. Emits a `payment.status_updated` event on every status transition. ' +
+      'The connection closes automatically when the payment reaches a terminal state (COMPLETED, FAILED, CANCELLED, REFUNDED). ' +
+      'Pass the JWT either as `Authorization: Bearer <token>` header or as `?token=<jwt>` query parameter (required for browser EventSource).',
+  })
+  @ApiParam({ name: 'id', description: 'Payment UUID' })
+  @ApiQuery({
+    name: 'token',
+    required: false,
+    description: 'JWT bearer token (alternative to Authorization header for browser EventSource clients)',
+  })
+  @ApiBearerAuth('bearer')
+  @ApiOkResponse({
+    description: 'SSE stream of payment status events.',
+    schema: {
+      example: {
+        type: 'payment.status_updated',
+        data: {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          status: 'COMPLETED',
+          updatedAt: '2026-01-26T11:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT.' })
+  @ApiNotFoundResponse({ description: 'Payment not found.' })
+  streamEvents(@Param('id') id: string): Observable<MessageEvent> {
+    return this.paymentSseService.subscribe(id);
   }
 }
 

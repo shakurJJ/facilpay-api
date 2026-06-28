@@ -11,6 +11,7 @@ import { IdempotencyService } from './idempotency.service';
 import { IdempotencyInterceptor } from './idempotency.interceptor';
 import { CurrencyConfigService } from './currency-config.service';
 import { CurrenciesController } from './currencies.controller';
+import { PaymentSseService } from './payment-sse.service';
 
 
 @Module({
@@ -24,6 +25,7 @@ import { CurrenciesController } from './currencies.controller';
     IdempotencyService,
     IdempotencyInterceptor,
     CurrencyConfigService,
+    PaymentSseService,
   ],
   exports: [PaymentsService, WebhookSignatureService, WebhookGuard],
 })

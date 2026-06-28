@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { Settlement } from '../../settlements/entities/settlement.entity';
 
 @Injectable()
 export class MailService {
@@ -35,6 +36,30 @@ export class MailService {
       subject: 'Verify your FacilPay email address',
       text: `Click the link to verify your email: ${verifyUrl}`,
       html: `<p>Click the link to verify your email address:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 24 hours.</p>`,
+    });
+  }
+
+  async sendSettlementNotification(
+    to: string,
+    settlement: Settlement,
+    totalAmount: number,
+  ): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.configService.get<string>('SMTP_FROM', '"FacilPay" <noreply@facilpay.com>'),
+      to,
+      subject: `FacilPay: Your ${settlement.schedule} settlement has been processed`,
+      text:
+        `Your ${settlement.schedule} settlement has been processed.\n\n` +
+        `Total: ${totalAmount} ${settlement.currency}\n` +
+        `Payments included: ${settlement.paymentIds.length}\n` +
+        `Processed at: ${settlement.processedAt.toISOString()}`,
+      html:
+        `<p>Your <strong>${settlement.schedule}</strong> settlement has been processed.</p>` +
+        `<ul>` +
+        `<li>Total: <strong>${totalAmount} ${settlement.currency}</strong></li>` +
+        `<li>Payments included: ${settlement.paymentIds.length}</li>` +
+        `<li>Processed at: ${settlement.processedAt.toISOString()}</li>` +
+        `</ul>`,
     });
   }
 

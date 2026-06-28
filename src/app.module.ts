@@ -5,6 +5,8 @@ import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { PaymentLinksModule } from './modules/payment-links/payment-links.module';
+import { SettlementsModule } from './modules/settlements/settlements.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LoggerModule } from './modules/logger/logger.module';
@@ -24,6 +26,8 @@ import { CorsModule } from './modules/cors/cors.module';
     UsersModule,
     AuthModule,
     PaymentsModule,
+    PaymentLinksModule,
+    SettlementsModule,
     StellarModule,
   ],
   controllers: [AppController],

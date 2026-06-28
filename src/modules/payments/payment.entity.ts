@@ -48,6 +48,9 @@ export class Payment {
   @Column({ nullable: true })
   cancelledAt: Date | null = null;
 
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, string> | null = null;
+
   @CreateDateColumn()
   createdAt: Date;
 

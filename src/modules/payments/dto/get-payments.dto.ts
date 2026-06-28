@@ -5,6 +5,7 @@ import {
   IsString,
   IsEnum,
   IsISO8601,
+  IsObject,
 } from 'class-validator';
 import { PaymentStatus } from '../payment.entity';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
@@ -70,4 +71,14 @@ export class GetPaymentsDto extends PaginationDto {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by metadata key-value pair, e.g. metadata[orderId]=order_123',
+    type: 'object',
+    additionalProperties: { type: 'string' },
+    example: { orderId: 'order_123' },
+  })
+  @IsObject()
+  @IsOptional()
+  metadata?: Record<string, string>;
 }

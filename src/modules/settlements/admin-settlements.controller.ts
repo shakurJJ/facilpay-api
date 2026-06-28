@@ -1,0 +1,35 @@
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
+} from '@nestjs/swagger';
+import { SettlementsService } from './settlements.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../../common/constants/roles';
+
+@ApiTags('admin')
+@Controller('v1/admin/settlements')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
+@ApiBearerAuth('bearer')
+export class AdminSettlementsController {
+  constructor(private readonly service: SettlementsService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'List all settlements (admin)',
+    description: 'Admin-only endpoint. Returns all settlements across all merchants.',
+  })
+  @ApiOkResponse({ description: 'All settlements.' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT.' })
+  @ApiForbiddenResponse({ description: 'Admin role required.' })
+  findAll() {
+    return this.service.findAllSettlements();
+  }
+}

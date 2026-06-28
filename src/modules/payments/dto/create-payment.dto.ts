@@ -7,9 +7,40 @@ import {
   Min,
   MaxLength,
   IsPositive,
+  IsObject,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsISO4217CurrencyCode } from '../../../common/validators/is-iso4217-currency-code.validator';
+import {
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
+} from 'class-validator';
+
+function IsMetadata(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'isMetadata',
+      target: (object as any).constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown, _args: ValidationArguments) {
+          if (value === undefined || value === null) return true;
+          if (typeof value !== 'object' || Array.isArray(value)) return false;
+          const entries = Object.entries(value as Record<string, unknown>);
+          if (entries.length > 20) return false;
+          return entries.every(
+            ([, v]) => typeof v === 'string' && v.length <= 500,
+          );
+        },
+        defaultMessage(_args: ValidationArguments) {
+          return 'metadata must have at most 20 keys, each value a string of max 500 characters';
+        },
+      },
+    });
+  };
+}
 
 export class CreatePaymentDto {
   @IsNumber()
@@ -51,4 +82,16 @@ export class CreatePaymentDto {
     maxLength: 2048,
   })
   callbackUrl?: string;
+
+  @IsObject()
+  @IsMetadata()
+  @IsOptional()
+  @ApiPropertyOptional({
+    description:
+      'Arbitrary key-value metadata. Max 20 keys, each value max 500 characters.',
+    example: { orderId: 'order_123', customerId: 'cust_456' },
+    type: 'object',
+    additionalProperties: { type: 'string' },
+  })
+  metadata?: Record<string, string>;
 }

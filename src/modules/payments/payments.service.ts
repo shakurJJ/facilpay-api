@@ -10,6 +10,7 @@ import { GetPaymentsDto } from './dto/get-payments.dto';
 import { AppLogger } from '../logger/logger.service';
 import { Logger } from 'pino';
 import { IdempotencyService } from './idempotency.service';
+import { PaymentSseService } from './payment-sse.service';
 
 @Injectable()
 export class PaymentsService {
@@ -23,6 +24,7 @@ export class PaymentsService {
     private readonly dataSource: DataSource,
     appLogger: AppLogger,
     private readonly idempotencyService: IdempotencyService,
+    private readonly paymentSseService: PaymentSseService,
   ) {
     this.logger = appLogger.child({ module: PaymentsService.name });
   }
@@ -170,12 +172,20 @@ export class PaymentsService {
     }
 
     if (getPaymentsDto.search) {
-      // Free-text search against description and externalReference
       const searchTerm = `%${getPaymentsDto.search}%`;
       query.andWhere(
         '(payment.description ILIKE :search OR payment.externalReference ILIKE :search)',
         { search: searchTerm },
       );
+    }
+
+    if (getPaymentsDto.metadata) {
+      const entries = Object.entries(getPaymentsDto.metadata);
+      entries.forEach(([key, value], i) => {
+        query.andWhere(`payment.metadata->>'${key}' = :metaVal${i}`, {
+          [`metaVal${i}`]: value,
+        });
+      });
     }
 
     // Apply pagination
@@ -268,6 +278,7 @@ export class PaymentsService {
         `Refund processed: ${savedRefund.id} for payment ${id}, amount: ${refundAmount}`,
       );
 
+      this.paymentSseService.emit(updatedPayment);
       return { payment: updatedPayment, refund: savedRefund };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -315,6 +326,7 @@ export class PaymentsService {
         `Webhook processed successfully for payment: ${updatedPayment.id}`,
       );
 
+      this.paymentSseService.emit(updatedPayment);
       return updatedPayment;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -363,6 +375,7 @@ export class PaymentsService {
       'Payment cancelled successfully',
     );
 
+    this.paymentSseService.emit(updatedPayment);
     return updatedPayment;
   }
 }

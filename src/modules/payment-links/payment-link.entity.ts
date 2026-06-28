@@ -1,0 +1,48 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
+
+@Entity('payment_links')
+export class PaymentLink {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Index({ unique: true })
+  @Column({ length: 32 })
+  token: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  amount: number;
+
+  @Column({ length: 3 })
+  currency: string;
+
+  @Column({ nullable: true, length: 500 })
+  description: string | null = null;
+
+  @Column({ nullable: true })
+  expiresAt: Date | null = null;
+
+  @Column({ default: true })
+  isActive: boolean = true;
+
+  @Column({ default: 0 })
+  views: number;
+
+  @Column({ default: 0 })
+  completions: number;
+
+  @Column()
+  merchantId: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+}

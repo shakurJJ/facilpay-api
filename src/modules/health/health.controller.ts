@@ -30,6 +30,10 @@ export class HealthController {
             status: 'healthy',
             message: 'Stellar network is reachable',
           },
+          horizonStream: {
+            status: 'connected',
+            message: 'Horizon SSE stream is active',
+          },
           system: {
             memory: {
               used: 536870912,
@@ -58,6 +62,10 @@ export class HealthController {
           stellar: {
             status: 'healthy',
             message: 'Stellar network is reachable',
+          },
+          horizonStream: {
+            status: 'disconnected',
+            message: 'Horizon SSE stream is not connected',
           },
           system: {
             memory: {

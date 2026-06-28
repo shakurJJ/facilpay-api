@@ -1,8 +1,8 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AppLogger } from '../logger/logger.service';
 import { Logger } from 'pino';
-import { StellarService } from '../stellar/stellar.service';
+import { StellarHorizonStreamService } from '../stellar/stellar-horizon-stream.service';
 import * as os from 'os';
 
 interface HealthCheckResult {
@@ -17,6 +17,10 @@ interface HealthCheckResult {
     };
     stellar: {
       status: 'healthy' | 'unhealthy';
+      message: string;
+    };
+    horizonStream: {
+      status: 'connected' | 'disconnected' | 'disabled';
       message: string;
     };
     system: {
@@ -36,7 +40,7 @@ export class HealthService {
 
   constructor(
     private readonly dataSource: DataSource,
-    private readonly stellarService: StellarService,
+    private readonly horizonStreamService: StellarHorizonStreamService,
     appLogger: AppLogger,
   ) {
     this.logger = appLogger.child({ module: HealthService.name });
@@ -44,7 +48,8 @@ export class HealthService {
 
   async check(): Promise<HealthCheckResult> {
     const dbStatus = await this.checkDatabase();
-    const stellarStatus = await this.checkStellar();
+    const stellarStatus = await this.checkStellarNetwork();
+    const horizonStreamStatus = this.checkHorizonStream();
     const systemStatus = this.checkSystem();
 
     const isHealthy = dbStatus.status === 'healthy' && stellarStatus.status === 'healthy';
@@ -61,6 +66,7 @@ export class HealthService {
       services: {
         database: dbStatus,
         stellar: stellarStatus,
+        horizonStream: horizonStreamStatus,
         system: systemStatus,
       },
     };
@@ -93,12 +99,11 @@ export class HealthService {
     }
   }
 
-  private async checkStellar(): Promise<{
+  private async checkStellarNetwork(): Promise<{
     status: 'healthy' | 'unhealthy';
     message: string;
   }> {
     try {
-      // Ping Stellar horizon endpoint
       const horizonUrl = process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -120,6 +125,19 @@ export class HealthService {
         message: error instanceof Error ? error.message : 'Stellar network unreachable',
       };
     }
+  }
+
+  private checkHorizonStream(): {
+    status: 'connected' | 'disconnected' | 'disabled';
+    message: string;
+  } {
+    if (!process.env.STELLAR_MERCHANT_ACCOUNT_ID) {
+      return { status: 'disabled', message: 'STELLAR_MERCHANT_ACCOUNT_ID not configured' };
+    }
+    if (this.horizonStreamService.connected) {
+      return { status: 'connected', message: 'Horizon SSE stream is active' };
+    }
+    return { status: 'disconnected', message: 'Horizon SSE stream is not connected' };
   }
 
   private checkSystem(): {

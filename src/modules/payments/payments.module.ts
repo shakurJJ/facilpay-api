@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
 import { Payment } from './payment.entity';
@@ -13,11 +14,9 @@ import { CurrencyConfigService } from './currency-config.service';
 import { CurrenciesController } from './currencies.controller';
 import { PaymentSseService } from './payment-sse.service';
 
-
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, Refund, IdempotencyKey])],
+  imports: [ConfigModule, TypeOrmModule.forFeature([Payment, Refund, IdempotencyKey])],
   controllers: [PaymentsController, CurrenciesController],
-
   providers: [
     PaymentsService,
     WebhookSignatureService,
@@ -29,4 +28,5 @@ import { PaymentSseService } from './payment-sse.service';
   ],
   exports: [PaymentsService, WebhookSignatureService, WebhookGuard],
 })
-export class PaymentsModule { }
+export class PaymentsModule {}
+

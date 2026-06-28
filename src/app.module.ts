@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PaymentLinksModule } from './modules/payment-links/payment-links.module';
 import { SettlementsModule } from './modules/settlements/settlements.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LoggerModule } from './modules/logger/logger.module';
@@ -28,6 +29,7 @@ import { CorsModule } from './modules/cors/cors.module';
     PaymentsModule,
     PaymentLinksModule,
     SettlementsModule,
+    WebhooksModule,
     StellarModule,
   ],
   controllers: [AppController],

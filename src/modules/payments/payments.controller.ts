@@ -10,8 +10,6 @@ import {
   UseGuards,
   UseInterceptors,
   BadRequestException,
-  Headers,
-  Res,
   Sse,
   MessageEvent,
 } from '@nestjs/common';
@@ -31,7 +29,6 @@ import {
   ApiNotFoundResponse,
   ApiUnauthorizedResponse,
   ApiInternalServerErrorResponse,
-  ApiUnprocessableEntityResponse,
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
@@ -115,13 +112,14 @@ export class PaymentsController {
       },
     },
   })
-  @ApiUnprocessableEntityResponse({
-    description:
-      'Idempotency key reused with different request body, or other unprocessable entity error.',
+  @ApiResponse({
+    status: 409,
+    description: 'Idempotency key reused with a different request body.',
     schema: {
       example: {
-        statusCode: 422,
+        statusCode: 409,
         message: 'Idempotency key reused with different request body',
+        error: 'Conflict',
       },
     },
   })
@@ -131,11 +129,8 @@ export class PaymentsController {
       example: { statusCode: 500, message: 'Internal server error' },
     },
   })
-  create(
-    @Body() createPaymentDto: CreatePaymentDto,
-    @Headers('idempotency-key') idempotencyKey?: string,
-  ) {
-    return this.paymentsService.create(createPaymentDto, idempotencyKey);
+  create(@Body() createPaymentDto: CreatePaymentDto) {
+    return this.paymentsService.create(createPaymentDto);
   }
 
   @BulkThrottle()

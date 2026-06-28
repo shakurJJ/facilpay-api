@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, LessThanOrEqual, MoreThanOrEqual, Like, Between } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Payment, PaymentStatus } from './payment.entity';
 import { Refund } from './refund.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -9,7 +9,6 @@ import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { GetPaymentsDto } from './dto/get-payments.dto';
 import { AppLogger } from '../logger/logger.service';
 import { Logger } from 'pino';
-import { IdempotencyService } from './idempotency.service';
 import { PaymentSseService } from './payment-sse.service';
 
 @Injectable()
@@ -23,7 +22,6 @@ export class PaymentsService {
     private readonly refundRepository: Repository<Refund>,
     private readonly dataSource: DataSource,
     appLogger: AppLogger,
-    private readonly idempotencyService: IdempotencyService,
     private readonly paymentSseService: PaymentSseService,
   ) {
     this.logger = appLogger.child({ module: PaymentsService.name });
@@ -36,21 +34,7 @@ export class PaymentsService {
    * @param idempotencyKey - Optional idempotency key for request deduplication
    * @returns Created payment
    */
-  async create(
-    createPaymentDto: CreatePaymentDto,
-    idempotencyKey?: string,
-  ): Promise<Payment> {
-    // Check for existing idempotency key
-    if (idempotencyKey) {
-      const cachedResponse = await this.idempotencyService.checkIdempotencyKey(
-        idempotencyKey,
-        createPaymentDto as unknown as Record<string, unknown>,
-      );
-      if (cachedResponse) {
-        return cachedResponse.responseBody as unknown as Payment;
-      }
-    }
-
+  async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
     const queryRunner = this.dataSource.createQueryRunner();
 
     try {
@@ -70,16 +54,6 @@ export class PaymentsService {
 
       await queryRunner.commitTransaction();
       this.logger.info(`Payment created successfully: ${savedPayment.id}`);
-
-      // Store idempotency key after successful creation
-      if (idempotencyKey) {
-        await this.idempotencyService.storeIdempotencyKey(
-          idempotencyKey,
-          createPaymentDto as unknown as Record<string, unknown>,
-          savedPayment as unknown as Record<string, unknown>,
-          201,
-        );
-      }
 
       return savedPayment;
     } catch (error) {

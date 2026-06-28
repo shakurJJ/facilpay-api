@@ -51,8 +51,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
-  ) { }
-  constructor(private authService: AuthService) {}
+  ) {}
 
   @AuthThrottle()
   @Post('register')
